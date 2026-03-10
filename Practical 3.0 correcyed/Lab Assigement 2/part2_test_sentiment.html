@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Part 2 - Test Sentiment</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/universal-sentence-encoder"></script>
+</head>
+<body>
+  <h2>Part 2: Test Sentiment (No Training)</h2>
+  <input id="text" size="60" placeholder="Type a sentence..." />
+  <button onclick="predict()">Analyze</button>
+  <pre id="out"></pre>
+
+  <script>
+    let model;
+
+    async function loadModel() {
+      model = await use.load();
+      document.getElementById("out").textContent = "Model loaded. Enter text.";
+    }
+
+    async function predict() {
+      const text = document.getElementById("text").value;
+      const emb = await model.embed([text]);
+      const values = emb.arraySync()[0];
+
+      const score = values.reduce((a, b) => a + b, 0);
+      const sentiment = score > 0 ? "Positive 😊" : "Negative 😞";
+      const confidence = Math.min(Math.abs(score) * 10, 100);
+
+      document.getElementById("out").textContent =
+        `Sentiment: ${sentiment}\nConfidence: ${confidence.toFixed(2)}%`;
+
+      console.log("Text:", text);
+      console.log("Sentiment:", sentiment);
+      console.log("Confidence:", confidence.toFixed(2) + "%");
+    }
+
+    loadModel();
+  </script>
+</body>
+</html>

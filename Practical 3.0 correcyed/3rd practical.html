@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Text Sentiment Analysis (MLT)</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/toxicity"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/universal-sentence-encoder"></script>
+</head>
+<body>
+  <h2>Text Sentiment Analysis (Positive / Negative)</h2>
+
+  <input id="textInput" type="text" size="60" placeholder="Type a sentence here..." />
+  <button onclick="analyze()">Analyze Sentiment</button>
+
+  <h3 id="result"></h3>
+
+  <script>
+    let model;
+
+    async function loadModel() {
+      document.getElementById("result").innerText = "Loading model...";
+      model = await use.load();
+      document.getElementById("result").innerText = "Model loaded! Enter text.";
+      console.log("Model loaded");
+    }
+
+    async function analyze() {
+      const text = document.getElementById("textInput").value;
+
+      if (!text) {
+        alert("Please enter some text");
+        return;
+      }
+
+      const embeddings = await model.embed([text]);
+      const values = embeddings.arraySync()[0];
+
+      const score = values.reduce((a, b) => a + b, 0);
+
+      let sentiment = score > 0 ? "Negative 😞" : "Positive 😊";
+
+      document.getElementById("result").innerText = "Sentiment: " + sentiment;
+
+      console.log("Text:", text);
+      console.log("Sentiment:", sentiment);
+    }
+
+    loadModel();
+  </script>
+</body>
+</html>

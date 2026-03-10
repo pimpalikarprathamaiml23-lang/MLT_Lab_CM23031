@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Part 1 - Train Sentiment Classifier</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0"></script>
+</head>
+<body>
+  <h2>Part 1: Train Sentiment Classifier</h2>
+  <button onclick="train()">Train Model</button>
+  <pre id="log"></pre>
+
+  <script>
+    const log = msg => document.getElementById("log").textContent += msg + "\n";
+
+    const texts = [
+      "I love this movie",
+      "This is amazing",
+      "I am very happy",
+      "This is wonderful",
+      "I hate this",
+      "This is terrible",
+      "I am very sad",
+      "Worst experience ever"
+    ];
+
+    const labels = [1,1,1,1,0,0,0,0]; // 1 = positive, 0 = negative
+
+    const vocab = {};
+    let vocabSize = 0;
+
+    function tokenize(text) {
+      return text.toLowerCase().split(" ").map(word => {
+        if (!(word in vocab)) vocab[word] = vocabSize++;
+        return vocab[word];
+      });
+    }
+
+    function pad(seq, maxLen) {
+      return seq.concat(Array(maxLen - seq.length).fill(0));
+    }
+
+    async function train() {
+      document.getElementById("log").textContent = "";
+      log("Preparing dataset...");
+
+      const sequences = texts.map(t => tokenize(t));
+      const maxLen = Math.max(...sequences.map(s => s.length));
+      const padded = sequences.map(s => pad(s, maxLen));
+
+      const xs = tf.tensor2d(padded);
+      const ys = tf.tensor1d(labels);
+
+      const model = tf.sequential();
+      model.add(tf.layers.embedding({ inputDim: vocabSize, outputDim: 8, inputLength: maxLen }));
+      model.add(tf.layers.simpleRNN({ units: 16 }));
+      model.add(tf.layers.dense({ units: 1, activation: 'sigmoid' }));
+
+      model.compile({
+        optimizer: 'adam',
+        loss: 'binaryCrossentropy',
+        metrics: ['accuracy']
+      });
+
+      log("Training RNN model...");
+      await model.fit(xs, ys, { epochs: 20, batchSize: 2 });
+
+      window.trainedModel = model;
+      window.maxLen = maxLen;
+
+      log("Training completed!");
+      console.log("Model trained");
+    }
+  </script>
+</body>
+</html>

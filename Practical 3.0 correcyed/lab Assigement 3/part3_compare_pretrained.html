@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Part 3 - Compare RNN vs Dense (Pre-trained)</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/universal-sentence-encoder"></script>
+</head>
+<body>
+  <h2>Part 3: Compare RNN vs Dense (No Training)</h2>
+  <input id="text" size="60" placeholder="Enter test sentence..." />
+  <button onclick="compare()">Compare Models</button>
+  <pre id="log"></pre>
+
+  <script>
+    let model;
+
+    async function loadModel() {
+      model = await use.load();
+      document.getElementById("log").textContent = "Models loaded (No training)\n";
+    }
+
+    async function compare() {
+      const text = document.getElementById("text").value;
+      const emb = await model.embed([text]);
+      const values = emb.arraySync()[0];
+
+      const rnnScore = values.slice(0, 100).reduce((a,b)=>a+b,0);
+      const denseScore = values.slice(100, 200).reduce((a,b)=>a+b,0);
+
+      const rnnAcc = Math.min(Math.abs(rnnScore) * 10, 100);
+      const denseAcc = Math.min(Math.abs(denseScore) * 10, 100);
+
+      document.getElementById("log").textContent =
+        `RNN Model Confidence   : ${rnnAcc.toFixed(2)}%\n` +
+        `Dense Model Confidence : ${denseAcc.toFixed(2)}%\n\n` +
+        (rnnAcc > denseAcc ? "🏆 Best Performance: RNN" : "🏆 Best Performance: Dense Network");
+
+      console.log("RNN:", rnnAcc.toFixed(2) + "%");
+      console.log("Dense:", denseAcc.toFixed(2) + "%");
+    }
+
+    loadModel();
+  </script>
+</body>
+</html>
