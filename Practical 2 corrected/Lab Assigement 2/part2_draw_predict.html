@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MLT - Draw Digit & Predict (MNIST CNN)</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0"></script>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    canvas { border: 2px solid #333; cursor: crosshair; }
+    button { margin: 6px; padding: 8px 14px; }
+  </style>
+</head>
+<body>
+  <h2>Part 2: Draw a Digit & Predict</h2>
+
+  <canvas id="canvas" width="280" height="280"></canvas>
+  <br><br>
+
+  <button onclick="predict()">Predict</button>
+  <button onclick="clearCanvas()">Clear</button>
+
+  <h3 id="result">Draw a digit (0–9) and click Predict</h3>
+  <p>Open Console (F12) to see logs</p>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    // Fill background black
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    let drawing = false;
+
+    // Mouse events
+    canvas.addEventListener("mousedown", () => drawing = true);
+    canvas.addEventListener("mouseup", () => drawing = false);
+    canvas.addEventListener("mouseleave", () => drawing = false);
+    canvas.addEventListener("mousemove", (e) => {
+      if (!drawing) return;
+      ctx.fillStyle = "white";
+      ctx.beginPath();
+      ctx.arc(e.offsetX, e.offsetY, 10, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    async function predict() {
+      try {
+        // Load trained model from browser storage
+        const model = await tf.loadLayersModel('localstorage://cnn-mnist');
+
+        // Preprocess canvas image
+        let img = tf.browser.fromPixels(canvas, 1)
+          .resizeNearestNeighbor([28, 28])
+          .toFloat()
+          .div(255.0)
+          .reshape([1, 28, 28, 1]);
+
+        const pred = model.predict(img);
+        const digit = pred.argMax(-1).dataSync()[0];
+
+        // Show result on page
+        document.getElementById("result").innerText = "Predicted Digit: " + digit;
+
+        // Log to console
+        console.log("Predicted Digit:", digit);
+
+      } catch (err) {
+        console.error("Prediction Error:", err);
+        alert("❌ Model not found! Please run Part 1 (training) first in the same browser.");
+      }
+    }
+
+    function clearCanvas() {
+      ctx.fillStyle = "black";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      document.getElementById("result").innerText = "Canvas cleared. Draw again!";
+      console.log("Canvas cleared");
+    }
+  </script>
+</body>
+</html>
