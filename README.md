@@ -5,8 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-Programming-blue?style=for-the-badge\&logo=python)
 ![Pandas](https://img.shields.io/badge/Pandas-Data%20Analysis-black?style=for-the-badge\&logo=pandas)
 ![NumPy](https://img.shields.io/badge/NumPy-Scientific%20Computing-blue?style=for-the-badge\&logo=numpy)
-![Matplotlib](https://img.shields.io/badge/Matplotlib-Vismualization-orange?style=for-the-badge)
-
+!
 ---
 
 # 👨‍🎓 Student Information
@@ -38,7 +37,6 @@ The lab focuses on:
 # 📂 Repository Structure
 
 This repository contains different practical experiments and their outputs.
-## 📚 Experiment List
 
 ---
 
