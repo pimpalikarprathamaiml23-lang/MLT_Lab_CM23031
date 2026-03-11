@@ -40,14 +40,13 @@ The lab focuses on:
 # 📂 Repository Structure
 
 This repository contains different practical experiments and their outputs.
+## 📚 Experiment List
 
-| Folder / File                             | Description                                          |
-| ----------------------------------------- | ---------------------------------------------------- |
-| **MTL_Lab_CM23031**                       | Main lab practical files                             |
-| **Linear Regression With Synthetic Data** | Implementation of regression using generated dataset |
-| **Practical 2 corrected**                 | Updated practical implementation                     |
-| **Practical 3.0 corrected**               | Improved ML experiment                               |
-| **Output Files**                          | Results and experiment outputs                       |
+| Practical | Description | Link |
+|-----------|-------------|------|
+| Practical 1 | Linear Regression with Synthetic Data | [Open Practical 1](https://github.com/pimpalikarprathamaiml23-lang/MLT_Lab_CM23031/tree/main/Linear%20Regression%20With%20Synthetic%20Data) |
+| Practical 2 | Corrected Practical Implementation | [Open Practical 2](https://github.com/pimpalikarprathamaiml23-lang/MLT_Lab_CM23031/tree/main/Practical%202%20corrected) |
+| Practical 3 | Machine Learning Experiment | [Open Practical 3](https://github.com/pimpalikarprathamaiml23-lang/MLT_Lab_CM23031/tree/main/Practical%203.0%20correcyed) |                  |
 
 ---
 
