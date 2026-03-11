@@ -20,7 +20,15 @@
 | **Institute**     | S. B. Jain Institute of Technology, Management & Research, Nagpur |
 
 ---
+## 📚 Experiment List
 
+| Practical | Description |
+|-----------|-------------|
+| Practical 1 | Linear Regression With Synthetic Data |
+| Practical 2 | Practical 2 Corrected Implementation |
+| Practical 3 | Practical 3.0 Corrected Implementation |
+| Output 1 | Output files of Practical 1 |
+| Output 2 | Output files of Practical 2 |
 # 📖 Course Overview
 
 This repository contains all practical assignments and experiments completed for the **Machine Learning Tools Lab** course.
