@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-Programming-blue?style=for-the-badge\&logo=python)
 ![Pandas](https://img.shields.io/badge/Pandas-Data%20Analysis-black?style=for-the-badge\&logo=pandas)
 ![NumPy](https://img.shields.io/badge/NumPy-Scientific%20Computing-blue?style=for-the-badge\&logo=numpy)
-![Matplotlib](https://img.shields.io/badge/Matplotlib-Visualization-orange?style=for-the-badge)
+![Matplotlib](https://img.shields.io/badge/Matplotlib-Vismualization-orange?style=for-the-badge)
 
 ---
 
@@ -42,11 +42,17 @@ The lab focuses on:
 This repository contains different practical experiments and their outputs.
 ## 📚 Experiment List
 
+## 📚 Experiment List
+
 | Practical | Description | Link |
 |-----------|-------------|------|
 | Practical 1 | Linear Regression with Synthetic Data | [Open Practical 1](https://github.com/pimpalikarprathamaiml23-lang/MLT_Lab_CM23031/tree/main/Linear%20Regression%20With%20Synthetic%20Data) |
-| Practical 2 | Corrected Practical Implementation | [Open Practical 2](https://github.com/pimpalikarprathamaiml23-lang/MLT_Lab_CM23031/tree/main/Practical%202%20corrected) |
-| Practical 3 | Machine Learning Experiment | [Open Practical 3](https://github.com/pimpalikarprathamaiml23-lang/MLT_Lab_CM23031/tree/main/Practical%203.0%20correcyed) |                  |
+| Practical 1 Output | Output files of Linear Regression experiment | [View Output](https://github.com/pimpalikarprathamaiml23-lang/MLT_Lab_CM23031/tree/main/Linear%20Regression%20With%20Synthetic%20Data/Output) |
+| Practical 2 | Machine Learning Practical 2 Implementation | [Open Practical 2](https://github.com/pimpalikarprathamaiml23-lang/MLT_Lab_CM23031/tree/main/Practical%202%20corrected) |
+| Practical 2 Output | Output files for Practical 2 | [View Output](https://github.com/pimpalikarprathamaiml23-lang/MLT_Lab_CM23031/tree/main/Practical%202%20corrected/output%202) |
+| Practical 3 | Machine Learning Practical 3 Implementation | [Open Practical 3](https://github.com/pimpalikarprathamaiml23-lang/MLT_Lab_CM23031/tree/main/Practical%203.0%20correcyed) |
+| Practical 3 Output | Output files for Practical 3 | [View Output](https://github.com/pimpalikarprathamaiml23-lang/MLT_Lab_CM23031/tree/main/Practical%203.0%20correcyed/practical%203.0%20corrected) |
+| Lab Folder | Main lab files and resources | [Open Lab Folder](https://github.com/pimpalikarprathamaiml23-lang/MLT_Lab_CM23031/tree/main/MTL_Lab_CM23031) |              |
 
 ---
 
