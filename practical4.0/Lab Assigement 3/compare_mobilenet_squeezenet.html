@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Compare MobileNet vs Coco-SSD</title>
+
+  <!-- TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0/dist/tf.min.js"></script>
+
+  <!-- MobileNet (image classification) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js"></script>
+
+  <!-- Coco-SSD (object detection, MobileNet backbone) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
+</head>
+<body>
+  <h2>Compare MobileNet (Classification) vs Coco-SSD (Detection)</h2>
+
+  <input type="file" id="imageUpload" />
+  <br /><br />
+  <img id="preview" width="300" />
+  <br /><br />
+
+  <button onclick="compareModels()">Compare Models</button>
+
+  <pre id="result">Loading models...</pre>
+
+  <script>
+    let mobileNetModel = null;
+    let cocoModel = null;
+
+    async function loadModels() {
+      try {
+        document.getElementById("result").textContent = "Loading models... please wait...";
+        mobileNetModel = await mobilenet.load();
+        cocoModel = await cocoSsd.load();
+
+        document.getElementById("result").textContent =
+          "Models loaded successfully. Upload an image and click Compare.";
+        console.log("Models loaded:", mobileNetModel, cocoModel);
+      } catch (err) {
+        console.error("Error loading models:", err);
+        document.getElementById("result").textContent =
+          "Error loading models. Check console for details.";
+      }
+    }
+
+    loadModels();
+
+    document.getElementById("imageUpload").addEventListener("change", function (e) {
+      const file = e.target.files[0];
+      const img = document.getElementById("preview");
+      img.src = URL.createObjectURL(file);
+    });
+
+    async function compareModels() {
+      if (!mobileNetModel || !cocoModel) {
+        alert("Models are still loading. Please wait a few seconds.");
+        return;
+      }
+
+      const img = document.getElementById("preview");
+      if (!img.src) {
+        alert("Please upload an image first.");
+        return;
+      }
+
+      document.getElementById("result").textContent = "Running predictions...";
+
+      const mobilePreds = await mobileNetModel.classify(img);
+      const cocoPreds = await cocoModel.detect(img);
+
+      const mobileBest = mobilePreds[0];
+      const cocoBest = cocoPreds[0];
+
+      let output = "";
+      output += "MobileNet Best Classification:\n";
+      output += `${mobileBest.className} - ${(mobileBest.probability * 100).toFixed(2)}%\n\n`;
+
+      if (cocoBest) {
+        output += "Coco-SSD Top Detection:\n";
+        output += `${cocoBest.class} - ${(cocoBest.score * 100).toFixed(2)}%\n\n`;
+      } else {
+        output += "Coco-SSD Top Detection:\nNo object detected\n\n";
+      }
+
+      output += "Result:\n";
+      output +=
+        "MobileNet classifies the whole image into a category.\n" +
+        "Coco-SSD detects objects and labels them.\n" +
+        "Both are pre-trained and suitable for browser-based vision tasks.";
+
+      document.getElementById("result").textContent = output;
+
+      console.log("MobileNet predictions:", mobilePreds);
+      console.log("Coco-SSD detections:", cocoPreds);
+    }
+  </script>
+</body>
+</html>

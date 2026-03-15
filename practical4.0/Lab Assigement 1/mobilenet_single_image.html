@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MobileNet Single Image Classification</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js"></script>
+</head>
+<body>
+<h2>MobileNet Single Image Classification</h2>
+
+<input type="file" id="imgInput" accept="image/*">
+<div id="imgContainer"></div>
+<p>Open console (F12) to see top-3 predictions.</p>
+
+<script>
+let mobilenetModel;
+
+window.onload = async () => {
+    console.log("Loading MobileNet...");
+    mobilenetModel = await mobilenet.load();
+    console.log("MobileNet loaded");
+};
+
+document.getElementById('imgInput').addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if(!file || !mobilenetModel) return;
+
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.width = 224;
+    img.height = 224;
+    imgContainer.innerHTML = "";
+    imgContainer.appendChild(img);
+
+    img.onload = async () => {
+        const predictions = await mobilenetModel.classify(img, 3);
+        console.log("Top-3 Predictions for selected image:");
+        predictions.forEach((p, idx) => {
+            console.log(`${idx+1}. ${p.className} → ${(p.probability*100).toFixed(2)}%`);
+        });
+    };
+});
+</script>
+</body>
+</html>

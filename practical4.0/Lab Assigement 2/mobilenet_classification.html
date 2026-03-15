@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MobileNet Classification Fixed</title>
+
+  <!-- TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0/dist/tf.min.js"></script>
+
+  <!-- Correct MobileNet CDN (non-module, exposes 'mobilenet') -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js"></script>
+</head>
+<body>
+  <h2>MobileNet Image Classification</h2>
+  <input type="file" id="imgInput" accept="image/*" multiple>
+  <p>Open <b>Console (F12)</b> to see predictions</p>
+
+  <input type="file" id="imgInput" accept="image/*">
+<script>
+let mobilenetModel;
+
+window.onload = async () => {
+    mobilenetModel = await mobilenet.load();
+    console.log("MobileNet loaded successfully");
+};
+
+document.getElementById('imgInput').addEventListener('change', async (event) => {
+    const file = event.target.files[0];
+    if(!file) return;
+
+    // Create an image element
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.width = 224;
+    img.height = 224;
+
+    // Wait for image to fully load
+    img.onload = async () => {
+        console.log("Image loaded, now classifying...");
+        const predictions = await mobilenetModel.classify(img, 3);
+        console.log("Top-3 predictions:", predictions);
+    };
+
+    img.onerror = () => console.log("Failed to load image!");
+});
+</script>
+
+</body>
+</html>

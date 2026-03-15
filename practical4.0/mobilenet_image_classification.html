@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Image Classification with MobileNet</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+</head>
+<body>
+  <h2>Image Classification with Pre-trained MobileNet</h2>
+
+  <input type="file" id="imageUpload" accept="image/*" />
+  <br><br>
+  <img id="preview" width="224" />
+  <br><br>
+  <button onclick="classifyImage()">Classify Image</button>
+
+  <pre id="result"></pre>
+
+  <script>
+    let model;
+
+    async function loadModel() {
+      model = await mobilenet.load();
+      document.getElementById("result").textContent = "Model loaded. Upload an image.";
+    }
+
+    document.getElementById("imageUpload").addEventListener("change", function (e) {
+      const file = e.target.files[0];
+      const img = document.getElementById("preview");
+      img.src = URL.createObjectURL(file);
+    });
+
+    async function classifyImage() {
+      const img = document.getElementById("preview");
+      if (!img.src) {
+        alert("Upload an image first");
+        return;
+      }
+
+      const predictions = await model.classify(img);
+
+      let output = "Predictions:\n";
+      predictions.forEach(p => {
+        output += p.className + " - " + (p.probability * 100).toFixed(2) + "%\n";
+      });
+
+      document.getElementById("result").textContent = output;
+      console.log(predictions);
+    }
+
+    loadModel();
+  </script>
+</body>
+</html>
