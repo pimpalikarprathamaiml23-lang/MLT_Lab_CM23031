@@ -38,31 +38,6 @@ The lab focuses on:
 
 This repository contains different practical experiments and their outputs.
 
----
-
-# 📚 Experiment List
-
-| Sr No | Experiment                             | Description                        |
-| ----- | -------------------------------------- | ---------------------------------- |
-| 1     | Introduction to Machine Learning Tools | Understanding ML tools and setup   |
-| 2     | Linear Regression with Synthetic Data  | Building regression model          |
-| 3     | Data Visualization                     | Graphs and plots using Python      |
-| 4     | ML Model Implementation                | Basic predictive model experiments |
-
----
-
-# 🛠️ Tech Stack
-
-| Technology                            | Purpose                         |
-| ------------------------------------- | ------------------------------- |
-| **Python**                            | Machine learning implementation |
-| **NumPy**                             | Numerical computing             |
-| **Pandas**                            | Data manipulation               |
-| **Matplotlib**                        | Data visualization              |
-| **Jupyter Notebook / Python Scripts** | Running experiments             |
-
----
-
 # 🚀 How to Run the Project
 
 ### 1️⃣ Clone the Repository
@@ -92,16 +67,6 @@ python experiment1.py
 ```
 
 ---
-
-# 📊 Learning Outcomes
-
-After completing this lab, students will be able to:
-
-* Understand machine learning workflow
-* Implement regression models
-* Analyze datasets using Python
-* Visualize trends using graphs
-* Interpret ML model results
 
 ---
 
