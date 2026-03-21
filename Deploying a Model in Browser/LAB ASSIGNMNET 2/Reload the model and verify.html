@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lab 2 – Reload & Verify Model</title>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;background-image:repeating-linear-gradient(0deg,transparent,transparent 3px,#00ffe703 3px,#00ffe703 4px);color:#9adfd4;font-family:'Share Tech Mono',monospace;min-height:100vh;padding:24px;display:flex;flex-direction:column;align-items:center}
+h1{font-family:'Orbitron',sans-serif;font-size:1rem;color:#00ffe7;letter-spacing:5px;margin-bottom:3px;text-align:center}
+.sub{font-size:.62rem;color:#071a14;letter-spacing:2px;margin-bottom:18px;text-align:center}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:860px}
+.card{background:#010c10;border:1px solid #00ffe718;border-radius:8px;padding:16px}
+.ph{font-family:'Orbitron',sans-serif;font-size:.58rem;color:#00ffe7;letter-spacing:3px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #00ffe714}
+.info{font-size:.68rem;color:#1a4a3a;margin-bottom:10px;line-height:1.6}
+.code{color:#00ffe7;background:#00ffe710;padding:1px 6px;border-radius:3px;font-size:.65rem}
+.sb{margin-top:10px;background:#000;border:1px solid #00ffe714;border-radius:5px;padding:10px;font-size:.72rem;color:#1a3a55;min-height:44px;line-height:1.5}
+.sb.ok{color:#00ffe7;border-color:#00ffe730}
+.sb.err{color:#ff3a5c;border-color:#ff3a5c30}
+.log{background:#000;border:1px solid #00ffe70f;border-radius:5px;padding:10px;height:170px;overflow-y:auto;font-size:.68rem;margin-top:8px}
+.ll{color:#4a8aaa;margin-bottom:3px}
+.ll.ok{color:#00ffe7}
+.ll.err{color:#ff3a5c}
+.ll.warn{color:#ffaa00}
+.ll.dim{color:#1a3a55}
+.irow{display:flex;gap:8px;margin-top:8px}
+input{background:#000;border:1px solid #00ffe722;color:#9adfd4;font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:7px 10px;border-radius:4px;flex:1;outline:none}
+input:focus{border-color:#00ffe7}
+.res{background:#000;border:1px solid #00ffe718;border-radius:5px;padding:10px;margin-top:10px;font-family:'Orbitron',sans-serif;font-size:.9rem;color:#00ffe7;min-height:44px;display:flex;align-items:center}
+.btn{background:none;border:1px solid #00ffe7;color:#00ffe7;font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:2px;padding:8px 18px;border-radius:5px;cursor:pointer;transition:all .22s;margin-top:8px;display:block;width:100%}
+.btn:hover:not(:disabled){background:#00ffe7;color:#000}
+.btn:disabled{opacity:.2;cursor:not-allowed}
+.btn.sm{display:inline;width:auto;margin-top:0}
+</style>
+</head>
+<body>
+<h1>LAB ASSIGNMENT 2</h1>
+<p class="sub">AIM — RELOAD THE MODEL AND VERIFY PREDICTIONS MATCH THE ORIGINAL</p>
+<div class="grid">
+  <div class="card">
+    <div class="ph">STEP 1 — LOAD FROM LOCALSTORAGE</div>
+    <p class="info">Loads the model saved by Lab 1 from LocalStorage key <span class="code">lab1-model</span></p>
+    <button class="btn" onclick="loadModel()">⬆ LOAD MODEL</button>
+    <div class="sb" id="loadStatus">Not loaded</div>
+  </div>
+  <div class="card">
+    <div class="ph">STEP 2 — VERIFY PREDICTIONS</div>
+    <p class="info">Runs 9 test inputs and compares predicted vs expected output</p>
+    <button class="btn" id="verBtn" onclick="verifyAll()" disabled>✔ VERIFY ALL PREDICTIONS</button>
+    <div class="log" id="vlog"><div class="ll dim">Load model first…</div></div>
+  </div>
+  <div class="card">
+    <div class="ph">STEP 3 — CUSTOM PREDICT</div>
+    <div class="irow">
+      <input type="number" id="predIn" placeholder="0.0 – 1.0" step="0.01" min="0" max="1">
+      <button class="btn sm" id="predBtn" onclick="customPredict()" disabled>PREDICT</button>
+    </div>
+    <div class="res" id="result">—</div>
+  </div>
+  <div class="card">
+    <div class="ph">VERIFICATION CHART</div>
+    <canvas id="verChart" height="190"></canvas>
+  </div>
+</div>
+<script>
+if(!/Chrome/.test(navigator.userAgent)||/OPR|Edg|SamsungBrowser/.test(navigator.userAgent)){
+  document.body.innerHTML='<div style="color:#ff3a5c;font-family:monospace;text-align:center;margin-top:100px;font-size:1.1rem">⚠ Open in <strong>Google Chrome</strong> only.</div>';throw 0;
+}
+let lmodel,vchart;
+const INP=[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9];
+const EXP=[0,0,0,0,1,1,1,1,1];
+function alog(msg,cls=''){
+  const e=document.createElement('div');e.className='ll '+cls;e.textContent=msg;
+  const l=document.getElementById('vlog');l.appendChild(e);l.scrollTop=9999;
+}
+async function loadModel(){
+  const s=document.getElementById('loadStatus');
+  try{
+    lmodel=await tf.loadLayersModel('localstorage://lab1-model');
+    s.textContent='✓ Model loaded from LocalStorage "lab1-model"';s.className='sb ok';
+    document.getElementById('verBtn').disabled=false;
+    document.getElementById('predBtn').disabled=false;
+    document.getElementById('vlog').innerHTML='';
+    alog('✓ Model loaded — '+lmodel.layers.length+' layers','ok');
+    alog('  Input shape: '+JSON.stringify(lmodel.inputLayers[0].batchInputShape));
+  }catch(e){s.textContent='✖ Failed — run Lab 1 first and save.';s.className='sb err';}
+}
+async function verifyAll(){
+  document.getElementById('vlog').innerHTML='';
+  alog('● Verifying '+INP.length+' test points…');
+  const scores=[];let ok=0;
+  for(let i=0;i<INP.length;i++){
+    const t=tf.tensor2d([INP[i]],[1,1]);
+    const o=lmodel.predict(t);
+    const s=(await o.data())[0];
+    const pc=s>=.5?1:0;const match=pc===EXP[i];
+    if(match)ok++;scores.push(parseFloat(s.toFixed(3)));
+    alog(`  ${match?'✓':'✖'} x=${INP[i]}  score=${s.toFixed(3)}  pred=${pc}  expected=${EXP[i]}`,match?'ok':'err');
+    t.dispose();o.dispose();
+  }
+  const acc=((ok/INP.length)*100).toFixed(1);
+  alog(`● Accuracy: ${acc}% (${ok}/${INP.length})`,acc>=80?'ok':'warn');
+  const ctx=document.getElementById('verChart').getContext('2d');
+  if(vchart)vchart.destroy();
+  vchart=new Chart(ctx,{type:'bar',data:{labels:INP.map(v=>'x='+v),datasets:[
+    {label:'Predicted Score',data:scores,backgroundColor:'#00ffe744',borderColor:'#00ffe7',borderWidth:1.5,borderRadius:3},
+    {label:'Expected',data:EXP,backgroundColor:'#00b4ff33',borderColor:'#00b4ff',borderWidth:1.5,borderRadius:3}
+  ]},options:{plugins:{legend:{labels:{color:'#2a5570',font:{size:10}}}},scales:{x:{ticks:{color:'#1a4a3a',font:{size:9}},grid:{color:'#010c10'}},y:{min:0,max:1,ticks:{color:'#1a4a3a',font:{size:9}},grid:{color:'#010c10'}}},animation:{duration:300}}});
+}
+async function customPredict(){
+  const v=parseFloat(document.getElementById('predIn').value);
+  if(isNaN(v)||!lmodel)return;
+  const t=tf.tensor2d([v],[1,1]);const o=lmodel.predict(t);
+  const s=(await o.data())[0];const col=s>=.5?'#00ffe7':'#00b4ff';
+  document.getElementById('result').style.color=col;
+  document.getElementById('result').textContent=`${s>=.5?'CLASS 1':'CLASS 0'}  ▸  ${(s*100).toFixed(2)}%`;
+  t.dispose();o.dispose();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lab 3 – Export & Re-import Model</title>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;background-image:repeating-linear-gradient(0deg,transparent,transparent 3px,#5edfff03 3px,#5edfff03 4px);color:#a0cfe0;font-family:'Share Tech Mono',monospace;min-height:100vh;padding:24px;display:flex;flex-direction:column;align-items:center}
+h1{font-family:'Orbitron',sans-serif;font-size:1rem;color:#5edfff;letter-spacing:5px;margin-bottom:3px;text-align:center}
+.sub{font-size:.62rem;color:#071020;letter-spacing:2px;margin-bottom:18px;text-align:center}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:860px}
+.card{background:#010913;border:1px solid #5edfff18;border-radius:8px;padding:16px}
+.ph{font-family:'Orbitron',sans-serif;font-size:.58rem;color:#5edfff;letter-spacing:3px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #5edfff14}
+.info{font-size:.68rem;color:#1a3a55;margin-bottom:10px;line-height:1.6}
+.code{color:#5edfff;background:#5edfff10;padding:1px 6px;border-radius:3px;font-size:.65rem}
+.sb{margin-top:10px;background:#000;border:1px solid #5edfff14;border-radius:5px;padding:10px;font-size:.72rem;color:#1a3a55;min-height:44px;line-height:1.6}
+.sb.ok{color:#5edfff;border-color:#5edfff30}
+.sb.err{color:#ff3a5c;border-color:#ff3a5c30}
+.filelabel{display:block;margin-top:8px;border:1px dashed #5edfff44;border-radius:5px;padding:14px;text-align:center;cursor:pointer;font-size:.72rem;color:#5edfff;letter-spacing:1px;transition:all .2s}
+.filelabel:hover{background:#5edfff0a;border-color:#5edfff}
+.filelabel input{display:none}
+.log{background:#000;border:1px solid #5edfff0f;border-radius:5px;padding:10px;height:170px;overflow-y:auto;font-size:.68rem;margin-top:8px}
+.ll{color:#4a8aaa;margin-bottom:3px}
+.ll.ok{color:#5edfff}
+.ll.err{color:#ff3a5c}
+.ll.warn{color:#ffaa00}
+.ll.dim{color:#1a3a55}
+.irow{display:flex;gap:8px;margin-top:4px}
+input[type=number]{background:#000;border:1px solid #5edfff22;color:#a0cfe0;font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:7px 10px;border-radius:4px;flex:1;outline:none}
+input[type=number]:focus{border-color:#5edfff}
+.res{background:#000;border:1px solid #5edfff18;border-radius:5px;padding:10px;margin-top:10px;font-family:'Orbitron',sans-serif;font-size:.9rem;color:#5edfff;min-height:44px;display:flex;align-items:center}
+.btn{background:none;border:1px solid #5edfff;color:#5edfff;font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:2px;padding:8px 18px;border-radius:5px;cursor:pointer;transition:all .22s;margin-top:8px;display:block;width:100%}
+.btn:hover:not(:disabled){background:#5edfff;color:#000}
+.btn:disabled{opacity:.2;cursor:not-allowed}
+.btn.sm{display:inline;width:auto;margin-top:0}
+</style>
+</head>
+<body>
+<h1>LAB ASSIGNMENT 3</h1>
+<p class="sub">AIM — EXPORT MODEL TO FILES AND RE-IMPORT IT; TEST PREDICTIONS AGAIN</p>
+<div class="grid">
+  <div class="card">
+    <div class="ph">STEP 1 — LOAD &amp; EXPORT</div>
+    <p class="info">Load from LocalStorage, then download as <span class="code">.json</span> + <span class="code">.bin</span> files</p>
+    <button class="btn" onclick="loadAndExport()">⬆ LOAD &amp; EXPORT TO FILES</button>
+    <div class="sb" id="expStatus">Not started</div>
+  </div>
+  <div class="card">
+    <div class="ph">STEP 2 — RE-IMPORT FILES</div>
+    <p class="info">Select the exported <span class="code">model.json</span> and <span class="code">.bin</span> file together</p>
+    <label class="filelabel">
+      📂 SELECT model.json + .bin
+      <input type="file" id="fileInput" multiple accept=".json,.bin" onchange="importFiles(this.files)">
+    </label>
+    <div class="sb" id="impStatus">Awaiting file selection…</div>
+  </div>
+  <div class="card">
+    <div class="ph">STEP 3 — TEST PREDICTIONS</div>
+    <button class="btn" id="testBtn" onclick="runTests()" disabled>✔ RUN PREDICTION TESTS</button>
+    <div class="log" id="tlog"><div class="ll dim">Import model first…</div></div>
+  </div>
+  <div class="card">
+    <div class="ph">CUSTOM PREDICT</div>
+    <div class="irow">
+      <input type="number" id="predIn" placeholder="0.0 – 1.0" step="0.01" min="0" max="1">
+      <button class="btn sm" id="predBtn" onclick="customPredict()" disabled>PREDICT</button>
+    </div>
+    <div class="res" id="result">—</div>
+    <div class="ph" style="margin-top:14px">ACCURACY CHART</div>
+    <canvas id="accChart" height="130"></canvas>
+  </div>
+</div>
+<script>
+if(!/Chrome/.test(navigator.userAgent)||/OPR|Edg|SamsungBrowser/.test(navigator.userAgent)){
+  document.body.innerHTML='<div style="color:#ff3a5c;font-family:monospace;text-align:center;margin-top:100px;font-size:1.1rem">⚠ Open in <strong>Google Chrome</strong> only.</div>';throw 0;
+}
+let rmodel,achart;
+const INP=[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9];
+const EXP=[0,0,0,0,1,1,1,1,1];
+function alog(msg,cls=''){
+  const e=document.createElement('div');e.className='ll '+cls;e.textContent=msg;
+  const l=document.getElementById('tlog');l.appendChild(e);l.scrollTop=9999;
+}
+async function loadAndExport(){
+  const s=document.getElementById('expStatus');
+  try{
+    const m=await tf.loadLayersModel('localstorage://lab1-model');
+    s.textContent='✓ Loaded — downloading files…';s.className='sb ok';
+    await m.save('downloads://lab1-exported-model');
+    s.textContent='✓ Exported! Check Downloads for lab1-exported-model.json + .bin';s.className='sb ok';
+  }catch(e){s.textContent='✖ Failed — run Lab 1 & save first. '+e.message;s.className='sb err';}
+}
+async function importFiles(files){
+  const s=document.getElementById('impStatus');
+  if(!files||files.length<2){s.textContent='✖ Select both .json and .bin files together.';s.className='sb err';return;}
+  const jf=Array.from(files).find(f=>f.name.endsWith('.json'));
+  const bf=Array.from(files).filter(f=>f.name.endsWith('.bin'));
+  if(!jf||!bf.length){s.textContent='✖ Could not find .json and .bin files.';s.className='sb err';return;}
+  try{
+    rmodel=await tf.loadLayersModel(tf.io.browserFiles([jf,...bf]));
+    s.textContent=`✓ Re-imported!\n  JSON: ${jf.name}\n  BIN: ${bf.map(f=>f.name).join(', ')}`;s.className='sb ok';
+    document.getElementById('testBtn').disabled=false;
+    document.getElementById('predBtn').disabled=false;
+    document.getElementById('tlog').innerHTML='';
+    alog('✓ Model ready — click RUN PREDICTION TESTS','ok');
+  }catch(e){s.textContent='✖ Import error: '+e.message;s.className='sb err';}
+}
+async function runTests(){
+  document.getElementById('tlog').innerHTML='';
+  alog('● Testing re-imported model on '+INP.length+' samples…');
+  const scores=[];let ok=0;
+  for(let i=0;i<INP.length;i++){
+    const t=tf.tensor2d([INP[i]],[1,1]);const o=rmodel.predict(t);
+    const s=(await o.data())[0];const pc=s>=.5?1:0;const match=pc===EXP[i];
+    if(match)ok++;scores.push(parseFloat(s.toFixed(3)));
+    alog(`  ${match?'✓':'✖'} x=${INP[i]}  score=${s.toFixed(3)}  pred=${pc}  expected=${EXP[i]}`,match?'ok':'err');
+    t.dispose();o.dispose();
+  }
+  const acc=((ok/INP.length)*100).toFixed(1);
+  alog(`● Accuracy: ${acc}% (${ok}/${INP.length})`,acc>=80?'ok':'warn');
+  const ctx=document.getElementById('accChart').getContext('2d');
+  if(achart)achart.destroy();
+  achart=new Chart(ctx,{type:'bar',data:{labels:INP.map(v=>'x='+v),datasets:[
+    {label:'Score',data:scores,backgroundColor:scores.map(s=>s>=.5?'#5edfff44':'#ff3a5c44'),borderColor:scores.map(s=>s>=.5?'#5edfff':'#ff3a5c'),borderWidth:1.5,borderRadius:3},
+    {label:'Threshold 0.5',data:new Array(scores.length).fill(0.5),type:'line',borderColor:'#ffaa00',borderWidth:1,borderDash:[4,4],pointRadius:0,fill:false}
+  ]},options:{plugins:{legend:{labels:{color:'#1a3a55',font:{size:10}}}},scales:{x:{ticks:{color:'#1a3a55',font:{size:9}},grid:{color:'#010913'}},y:{min:0,max:1,ticks:{color:'#1a3a55',font:{size:9}},grid:{color:'#010913'}}},animation:{duration:300}}});
+}
+async function customPredict(){
+  const v=parseFloat(document.getElementById('predIn').value);
+  if(isNaN(v)||!rmodel)return;
+  const t=tf.tensor2d([v],[1,1]);const o=rmodel.predict(t);
+  const s=(await o.data())[0];const col=s>=.5?'#5edfff':'#00b4ff';
+  document.getElementById('result').style.color=col;
+  document.getElementById('result').textContent=`${s>=.5?'CLASS 1':'CLASS 0'}  ▸  ${(s*100).toFixed(2)}%`;
+  t.dispose();o.dispose();
+}
+</script>
+</body>
+</html>

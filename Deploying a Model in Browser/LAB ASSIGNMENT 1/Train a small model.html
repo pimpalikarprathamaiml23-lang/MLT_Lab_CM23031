@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lab 1 – Train & Save Model</title>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;background-image:repeating-linear-gradient(0deg,transparent,transparent 3px,#00b4ff03 3px,#00b4ff03 4px);color:#a0d4ff;font-family:'Share Tech Mono',monospace;min-height:100vh;padding:24px;display:flex;flex-direction:column;align-items:center}
+h1{font-family:'Orbitron',sans-serif;font-size:1rem;color:#00b4ff;letter-spacing:5px;margin-bottom:3px;text-align:center}
+.sub{font-size:.62rem;color:#0a1e30;letter-spacing:2px;margin-bottom:18px;text-align:center}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:860px}
+.card{background:#020c18;border:1px solid #00b4ff18;border-radius:8px;padding:16px}
+.card.full{grid-column:1/-1}
+.ph{font-family:'Orbitron',sans-serif;font-size:.58rem;color:#00b4ff;letter-spacing:3px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #00b4ff14}
+.row{display:flex;justify-content:space-between;padding:5px 10px;border-bottom:1px solid #00b4ff0a;font-size:.72rem}
+.row.h{color:#00b4ff;font-size:.6rem;letter-spacing:2px;border-bottom:1px solid #00b4ff22}
+.log{background:#000;border:1px solid #00b4ff0f;border-radius:5px;padding:10px;height:150px;overflow-y:auto;font-size:.68rem;margin-top:8px}
+.ll{color:#4a8aaa;margin-bottom:3px}
+.ll.ok{color:#00ffe7}
+.ll.err{color:#ff3a5c}
+.ll.dim{color:#1a3a55}
+.irow{display:flex;gap:8px;margin-top:8px}
+input{background:#000;border:1px solid #00b4ff22;color:#a0d4ff;font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:7px 10px;border-radius:4px;flex:1;outline:none}
+input:focus{border-color:#00b4ff}
+.res{background:#000;border:1px solid #00b4ff18;border-radius:5px;padding:10px;margin-top:10px;font-family:'Orbitron',sans-serif;font-size:.9rem;color:#00b4ff;min-height:44px;display:flex;align-items:center}
+.btn{background:none;border:1px solid #00b4ff;color:#00b4ff;font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:2px;padding:8px 18px;border-radius:5px;cursor:pointer;transition:all .22s;margin-top:8px;display:block;width:100%}
+.btn:hover:not(:disabled){background:#00b4ff;color:#000}
+.btn:disabled{opacity:.2;cursor:not-allowed}
+.btn.sm{display:inline;width:auto;margin-top:0}
+</style>
+</head>
+<body>
+<h1>LAB ASSIGNMENT 1</h1>
+<p class="sub">AIM — TRAIN A SMALL MODEL AND SAVE IT TO LOCALSTORAGE</p>
+<div class="grid">
+  <div class="card">
+    <div class="ph">TRAINING DATA</div>
+    <div class="row h"><span>X INPUT</span><span>Y LABEL</span></div>
+    <div class="row"><span>0.1</span><span>0</span></div>
+    <div class="row"><span>0.3</span><span>0</span></div>
+    <div class="row"><span>0.5</span><span>1</span></div>
+    <div class="row"><span>0.7</span><span>1</span></div>
+    <div class="row"><span>0.9</span><span>1</span></div>
+    <div class="ph" style="margin-top:16px">CONTROLS</div>
+    <button class="btn" id="trainBtn" onclick="trainModel()">▶ TRAIN MODEL</button>
+    <button class="btn" id="saveBtn" onclick="saveModel()" disabled>💾 SAVE TO LOCALSTORAGE</button>
+  </div>
+  <div class="card">
+    <div class="ph">TRAINING LOG</div>
+    <div class="log" id="log"><div class="ll dim">Waiting to train…</div></div>
+    <div class="ph" style="margin-top:14px">PREDICT</div>
+    <div class="irow">
+      <input type="number" id="predIn" placeholder="0.0 – 1.0" step="0.01" min="0" max="1">
+      <button class="btn sm" id="predBtn" onclick="predict()" disabled>GO</button>
+    </div>
+    <div class="res" id="result">—</div>
+  </div>
+  <div class="card full">
+    <div class="ph">LOSS CURVE</div>
+    <canvas id="lossChart" height="80"></canvas>
+  </div>
+</div>
+<script>
+if(!/Chrome/.test(navigator.userAgent)||/OPR|Edg|SamsungBrowser/.test(navigator.userAgent)){
+  document.body.innerHTML='<div style="color:#ff3a5c;font-family:monospace;text-align:center;margin-top:100px;font-size:1.1rem">⚠ Open in <strong>Google Chrome</strong> only.</div>';throw 0;
+}
+let model,chart;
+function alog(msg,cls=''){
+  const e=document.createElement('div');e.className='ll '+cls;e.textContent=msg;
+  const l=document.getElementById('log');l.appendChild(e);l.scrollTop=9999;
+}
+function initChart(){
+  chart=new Chart(document.getElementById('lossChart').getContext('2d'),{
+    type:'line',
+    data:{labels:[],datasets:[{label:'Loss',data:[],borderColor:'#00b4ff',borderWidth:1.5,pointRadius:0,fill:true,backgroundColor:'#00b4ff14',tension:.4}]},
+    options:{plugins:{legend:{labels:{color:'#2a5570',font:{size:10}}}},scales:{x:{ticks:{color:'#2a5570',font:{size:9}},grid:{color:'#020c18'}},y:{ticks:{color:'#2a5570',font:{size:9}},grid:{color:'#020c18'},beginAtZero:true}},animation:false}
+  });
+}
+async function trainModel(){
+  document.getElementById('trainBtn').disabled=true;
+  document.getElementById('log').innerHTML='';
+  if(!chart)initChart();
+  const xs=tf.tensor2d([0.1,0.3,0.5,0.7,0.9],[5,1]);
+  const ys=tf.tensor2d([0,0,1,1,1],[5,1]);
+  model=tf.sequential();
+  model.add(tf.layers.dense({units:8,inputShape:[1],activation:'relu'}));
+  model.add(tf.layers.dense({units:4,activation:'relu'}));
+  model.add(tf.layers.dense({units:1,activation:'sigmoid'}));
+  model.compile({optimizer:tf.train.adam(0.05),loss:'binaryCrossentropy',metrics:['accuracy']});
+  alog('● Architecture: Dense(8) → Dense(4) → Dense(1,sigmoid)');
+  alog('● Training 100 epochs…');
+  await model.fit(xs,ys,{epochs:100,callbacks:{onEpochEnd:(ep,logs)=>{
+    chart.data.labels.push(ep+1);
+    chart.data.datasets[0].data.push(logs.loss.toFixed(4));
+    chart.update();
+    if((ep+1)%20===0)alog(`  Epoch ${ep+1}/100  loss=${logs.loss.toFixed(4)}  acc=${(logs.acc||logs.accuracy||0).toFixed(3)}`);
+  }}});
+  alog('✓ Training complete!','ok');
+  document.getElementById('saveBtn').disabled=false;
+  document.getElementById('predBtn').disabled=false;
+  document.getElementById('trainBtn').disabled=false;
+  xs.dispose();ys.dispose();
+}
+async function saveModel(){
+  try{await model.save('localstorage://lab1-model');alog('✓ Saved to LocalStorage as "lab1-model"','ok');}
+  catch(e){alog('✖ Save failed: '+e.message,'err');}
+}
+async function predict(){
+  const v=parseFloat(document.getElementById('predIn').value);
+  if(isNaN(v))return;
+  const inp=tf.tensor2d([v],[1,1]);
+  const out=model.predict(inp);
+  const s=(await out.data())[0];
+  const col=s>=.5?'#00ffe7':'#00b4ff';
+  document.getElementById('result').style.color=col;
+  document.getElementById('result').textContent=`${s>=.5?'CLASS 1':'CLASS 0'}  ▸  ${(s*100).toFixed(2)}% confidence`;
+  inp.dispose();out.dispose();
+}
+</script>
+</body>
+</html>
