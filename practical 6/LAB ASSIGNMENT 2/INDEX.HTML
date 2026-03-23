@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Lab Assignment 2 – Exercise Rep Counter</title>
+  <style>
+    body{margin:0;font-family:Segoe UI,sans-serif;background:#f0f4f8;display:flex;flex-direction:column;align-items:center;padding:20px}
+    h2{color:#1e40af;margin-bottom:2px;font-size:1.2rem}
+    p.sub{color:#64748b;font-size:.78rem;margin-bottom:14px}
+    .layout{display:flex;gap:16px;align-items:flex-start}
+    .wrap{position:relative;background:#0f172a;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+    video{position:absolute;opacity:0;pointer-events:none}
+    canvas{display:block;width:480px;height:360px}
+    .bar{position:absolute;top:10px;left:10px;background:rgba(0,0,0,.6);color:#94a3b8;font-size:.65rem;padding:3px 10px;border-radius:6px}
+    .panel{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 12px rgba(0,0,0,.08);min-width:200px;display:flex;flex-direction:column;gap:12px}
+    .rep-num{font-size:4rem;font-weight:800;color:#1d4ed8;text-align:center;line-height:1}
+    .rep-label{text-align:center;font-size:.7rem;color:#64748b;text-transform:uppercase;letter-spacing:.1em}
+    .phase-box{padding:8px 12px;border-radius:8px;text-align:center;font-size:.8rem;font-weight:600;background:#f1f5f9;color:#475569;transition:.3s}
+    .phase-box.down{background:#dcfce7;color:#15803d}
+    .angle-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px}
+    .angle-box label{font-size:.62rem;color:#64748b;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.08em}
+    .angle-val{font-size:1.4rem;font-weight:700;color:#1e293b}
+    .track{height:6px;background:#e2e8f0;border-radius:3px;margin-top:5px;overflow:hidden}
+    .fill{height:100%;border-radius:3px;background:#3b82f6;transition:width .1s}
+    select,button{padding:9px 14px;border:1px solid #cbd5e1;border-radius:7px;font-size:.8rem;font-weight:600;cursor:pointer;width:100%}
+    button{background:#1d4ed8;color:#fff;border:none}
+    button:hover{background:#1e40af}
+    #stopBtn{background:#fee2e2;color:#dc2626;margin-top:4px}
+    #stopBtn:disabled{opacity:.4;cursor:not-allowed}
+    #resetBtn{background:#f1f5f9;color:#475569}
+    .obj{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;font-size:.7rem;color:#1e40af;line-height:1.6;max-width:700px;margin-top:12px}
+  </style>
+</head>
+<body>
+<h2>💪 Lab Assignment 2 — Exercise Rep Counter</h2>
+<p class="sub">CO3 – Apply &nbsp;|&nbsp; Count repetitions using keypoint joint angles</p>
+
+<div class="layout">
+  <div class="wrap">
+    <video id="vid" autoplay muted playsinline></video>
+    <canvas id="cvs" width="480" height="360"></canvas>
+    <div class="bar" id="info">Not started</div>
+  </div>
+
+  <div class="panel">
+    <select id="exSel">
+      <option value="squat">🏋️ Squat</option>
+      <option value="curl">💪 Bicep Curl</option>
+      <option value="pushup">🤸 Push-up</option>
+    </select>
+    <div class="rep-num" id="repNum">0</div>
+    <div class="rep-label">Repetitions</div>
+    <div class="phase-box" id="phaseBox">Waiting…</div>
+    <div class="angle-box">
+      <label>Joint Angle</label>
+      <div class="angle-val" id="angleVal">--°</div>
+      <div class="track"><div class="fill" id="angleFill" style="width:0%"></div></div>
+    </div>
+    <button id="startBtn">▶ Start</button>
+    <button id="stopBtn" disabled>⏹ Stop</button>
+    <button id="resetBtn">↺ Reset</button>
+  </div>
+</div>
+
+<div class="obj">
+  <strong>📚 CO3 – Apply:</strong>
+  Load webcam → detect keypoints → compute joint angle (Law of Cosines) → track DOWN/UP phase → count rep when phase returns to UP.
+  &nbsp;|&nbsp; <b>Squat:</b> knee angle &nbsp;|&nbsp; <b>Curl:</b> elbow angle &nbsp;|&nbsp; <b>Push-up:</b> elbow angle
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
+<script>
+const EX = {
+  squat:  {a:11, b:13, c:15, down:110, up:160, label:'Knee'},
+  curl:   {a:5,  b:7,  c:9,  down:60,  up:155, label:'L.Elbow'},
+  pushup: {a:5,  b:7,  c:9,  down:85,  up:155, label:'L.Elbow'},
+};
+const EDGES=[[5,6],[5,7],[7,9],[6,8],[8,10],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16]];
+
+const vid=document.getElementById('vid'), cvs=document.getElementById('cvs'), ctx=cvs.getContext('2d');
+let detector=null, running=false, reps=0, phase='up', frames=0, t0=performance.now();
+
+function angle(A,B,C){
+  const ab={x:A.x-B.x,y:A.y-B.y}, cb={x:C.x-B.x,y:C.y-B.y};
+  const d=ab.x*cb.x+ab.y*cb.y, m=Math.sqrt((ab.x**2+ab.y**2)*(cb.x**2+cb.y**2));
+  return m?Math.round(Math.acos(Math.min(1,Math.max(-1,d/m)))*180/Math.PI):180;
+}
+
+async function start(){
+  document.getElementById('startBtn').disabled=true;
+  document.getElementById('info').textContent='Loading…';
+  detector=await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet,
+    {modelType:poseDetection.movenet.modelType.SINGLEPOSE_THUNDER});
+  const stream=await navigator.mediaDevices.getUserMedia({video:{width:480,height:360},audio:false});
+  vid.srcObject=stream; await new Promise(r=>vid.onloadedmetadata=r); vid.play();
+  running=true; document.getElementById('stopBtn').disabled=false; loop();
+}
+
+async function loop(){
+  if(!running)return;
+  frames++; const now=performance.now();
+  if(now-t0>1000){document.getElementById('info').textContent=`Live | ${Math.round(frames*1000/(now-t0))} fps`;frames=0;t0=now;}
+  ctx.save();ctx.translate(480,0);ctx.scale(-1,1);ctx.drawImage(vid,0,0,480,360);ctx.restore();
+  const poses=await detector.estimatePoses(vid,{maxPoses:1,flipHorizontal:false});
+  if(poses.length){
+    const kps=poses[0].keypoints.map(k=>({...k,x:480-k.x}));
+    EDGES.forEach(([a,b])=>{
+      if(kps[a].score<.3||kps[b].score<.3)return;
+      ctx.beginPath();ctx.moveTo(kps[a].x,kps[a].y);ctx.lineTo(kps[b].x,kps[b].y);
+      ctx.strokeStyle='#3b82f6';ctx.lineWidth=2.5;ctx.stroke();
+    });
+    kps.forEach(k=>{if(k.score<.3)return;ctx.beginPath();ctx.arc(k.x,k.y,4,0,2*Math.PI);ctx.fillStyle='#facc15';ctx.fill();});
+    const ex=EX[document.getElementById('exSel').value];
+    if(kps[ex.a].score>.3&&kps[ex.b].score>.3&&kps[ex.c].score>.3){
+      const ang=angle(kps[ex.a],kps[ex.b],kps[ex.c]);
+      document.getElementById('angleVal').textContent=ang+'°';
+      document.getElementById('angleFill').style.width=(ang/180*100)+'%';
+      ctx.beginPath();ctx.arc(kps[ex.b].x,kps[ex.b].y,10,0,2*Math.PI);
+      ctx.strokeStyle='#f97316';ctx.lineWidth=3;ctx.stroke();
+      if(phase==='up'&&ang<=ex.down){phase='down';}
+      else if(phase==='down'&&ang>=ex.up){phase='up';reps++;document.getElementById('repNum').textContent=reps;}
+      const pb=document.getElementById('phaseBox');
+      pb.textContent=phase==='down'?'▼ DOWN — Push back up!':'▲ UP — Lower to start rep';
+      pb.className='phase-box'+(phase==='down'?' down':'');
+    }
+  }
+  requestAnimationFrame(loop);
+}
+
+function stop(){
+  running=false;
+  if(vid.srcObject)vid.srcObject.getTracks().forEach(t=>t.stop());
+  ctx.clearRect(0,0,480,360);
+  document.getElementById('info').textContent='Stopped';
+  document.getElementById('startBtn').disabled=false;
+  document.getElementById('stopBtn').disabled=true;
+  document.getElementById('phaseBox').textContent='Waiting…';
+  document.getElementById('phaseBox').className='phase-box';
+}
+
+document.getElementById('startBtn').onclick=start;
+document.getElementById('stopBtn').onclick=stop;
+document.getElementById('resetBtn').onclick=()=>{reps=0;phase='up';document.getElementById('repNum').textContent='0';};
+document.getElementById('exSel').onchange=()=>{reps=0;phase='up';document.getElementById('repNum').textContent='0';};
+</script>
+</body>
+</html>

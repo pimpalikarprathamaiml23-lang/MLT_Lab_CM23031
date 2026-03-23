@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Lab Assignment 3 – Single vs Multi-Pose Accuracy</title>
+  <style>
+    body{margin:0;font-family:Segoe UI,sans-serif;background:#f0f4f8;display:flex;flex-direction:column;align-items:center;padding:20px}
+    h2{color:#1e40af;margin-bottom:2px;font-size:1.2rem}
+    p.sub{color:#64748b;font-size:.78rem;margin-bottom:14px}
+    .canvases{display:flex;gap:14px}
+    .box{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 14px rgba(0,0,0,.1);border:2px solid #e2e8f0}
+    .box.active{border-color:#3b82f6}
+    .box-title{padding:8px 14px;font-size:.75rem;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:.08em;color:#334155;background:#f8fafc;border-bottom:1px solid #e2e8f0}
+    .box-title span{font-size:.62rem;font-weight:400;color:#64748b;display:block;margin-top:1px}
+    canvas{display:block;width:310px;height:232px}
+    .stats{display:flex;gap:14px;margin-top:14px;width:100%}
+    .stat-card{flex:1;background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 2px 8px rgba(0,0,0,.07);border:1px solid #e2e8f0}
+    .stat-card h4{font-size:.68rem;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+    .stat-val{font-size:1.6rem;font-weight:800;color:#1d4ed8;line-height:1}
+    .stat-sub{font-size:.62rem;color:#94a3b8;margin-top:2px}
+    .track{height:5px;background:#e2e8f0;border-radius:3px;margin-top:6px;overflow:hidden}
+    .fill{height:100%;border-radius:3px;transition:width .15s}
+    .controls{margin-top:12px;display:flex;gap:10px}
+    button{padding:9px 22px;border:none;border-radius:7px;font-weight:600;font-size:.82rem;cursor:pointer}
+    #startBtn{background:#1d4ed8;color:#fff}
+    #startBtn:hover{background:#1e40af}
+    #stopBtn{background:#fee2e2;color:#dc2626}
+    #stopBtn:disabled{opacity:.4;cursor:not-allowed}
+    .verdict{margin-top:12px;padding:10px 18px;border-radius:8px;font-size:.78rem;font-weight:600;text-align:center;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;max-width:638px}
+    .obj{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:.7rem;color:#15803d;line-height:1.6;max-width:638px;margin-top:8px}
+  </style>
+</head>
+<body>
+<h2>📊 Lab Assignment 3 — Single vs Multi-Pose Detection Accuracy</h2>
+<p class="sub">CO3 – Apply &nbsp;|&nbsp; Compare keypoint confidence: SINGLEPOSE_THUNDER vs MULTIPOSE_LIGHTNING</p>
+
+<video id="vid" autoplay muted playsinline style="position:fixed;opacity:0;pointer-events:none"></video>
+
+<div class="canvases">
+  <div class="box active">
+    <div class="box-title">🔵 Single-Pose Model<span>SINGLEPOSE_THUNDER — High accuracy, 1 person</span></div>
+    <canvas id="cvsA" width="310" height="232"></canvas>
+  </div>
+  <div class="box">
+    <div class="box-title">🟠 Multi-Pose Model<span>MULTIPOSE_LIGHTNING — Fast, multiple people</span></div>
+    <canvas id="cvsB" width="310" height="232"></canvas>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat-card">
+    <h4>Single — Avg Confidence</h4>
+    <div class="stat-val" id="confA">--</div>
+    <div class="stat-sub">THUNDER model</div>
+    <div class="track"><div class="fill" id="fillA" style="width:0%;background:#3b82f6"></div></div>
+  </div>
+  <div class="stat-card">
+    <h4>Multi — Avg Confidence</h4>
+    <div class="stat-val" id="confB">--</div>
+    <div class="stat-sub">LIGHTNING model</div>
+    <div class="track"><div class="fill" id="fillB" style="width:0%;background:#f97316"></div></div>
+  </div>
+  <div class="stat-card">
+    <h4>FPS — Single</h4>
+    <div class="stat-val" id="fpsA">--</div>
+    <div class="stat-sub">frames/sec</div>
+  </div>
+  <div class="stat-card">
+    <h4>FPS — Multi</h4>
+    <div class="stat-val" id="fpsB">--</div>
+    <div class="stat-sub">frames/sec</div>
+  </div>
+  <div class="stat-card">
+    <h4>Detected KP &gt; 0.5</h4>
+    <div class="stat-val" id="kpA">--</div>
+    <div class="stat-sub">Single / 17</div>
+  </div>
+  <div class="stat-card">
+    <h4>Detected KP &gt; 0.5</h4>
+    <div class="stat-val" id="kpB">--</div>
+    <div class="stat-sub">Multi / 17</div>
+  </div>
+</div>
+
+<div class="verdict" id="verdict">Start detection to compare both models side-by-side.</div>
+
+<div class="controls">
+  <button id="startBtn">▶ Start Comparison</button>
+  <button id="stopBtn" disabled>⏹ Stop</button>
+</div>
+
+<div class="obj">
+  <strong>📚 CO3 – Apply:</strong>
+  Both models run on the <em>same</em> webcam frame simultaneously.
+  THUNDER (single-pose) focuses all computation on one person → higher confidence.
+  LIGHTNING (multi-pose) is optimised for speed with multiple subjects → faster FPS but lower per-keypoint accuracy.
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
+<script>
+const EDGES=[[5,6],[5,7],[7,9],[6,8],[8,10],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16],[0,5],[0,6]];
+const vid=document.getElementById('vid');
+const [cA,cB]=[document.getElementById('cvsA'),document.getElementById('cvsB')];
+const [xA,xB]=[cA.getContext('2d'),cB.getContext('2d')];
+let dA=null,dB=null,running=false;
+let tA=performance.now(),tB=performance.now(),fA=0,fB=0;
+
+function drawPose(ctx,kps,W,H,col){
+  EDGES.forEach(([a,b])=>{
+    if(!kps[a]||!kps[b]||kps[a].score<.25||kps[b].score<.25)return;
+    ctx.beginPath();ctx.moveTo(kps[a].x*(W/640),kps[a].y*(H/480));
+    ctx.lineTo(kps[b].x*(W/640),kps[b].y*(H/480));
+    ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();
+  });
+  kps.forEach(k=>{
+    if(!k||k.score<.25)return;
+    ctx.beginPath();ctx.arc(k.x*(W/640),k.y*(H/480),4,0,2*Math.PI);
+    ctx.fillStyle=k.score>.6?'#22c55e':k.score>.4?'#f59e0b':'#ef4444';
+    ctx.fill();
+  });
+}
+
+function avgConf(kps){
+  const v=kps.filter(k=>k&&k.score>0);
+  return v.length?(v.reduce((s,k)=>s+k.score,0)/v.length*100).toFixed(1)+'%':'--';
+}
+function highKP(kps){return kps.filter(k=>k&&k.score>.5).length;}
+
+async function loopA(){
+  if(!running)return;
+  fA++;const now=performance.now();
+  if(now-tA>1000){document.getElementById('fpsA').textContent=Math.round(fA*1000/(now-tA));fA=0;tA=now;}
+  xA.save();xA.translate(310,0);xA.scale(-1,1);xA.drawImage(vid,0,0,310,232);xA.restore();
+  try{
+    const p=await dA.estimatePoses(vid,{maxPoses:1,flipHorizontal:false});
+    if(p.length){
+      const kps=p[0].keypoints.map(k=>({...k,x:640-k.x}));
+      drawPose(xA,kps,310,232,'#3b82f6');
+      document.getElementById('confA').textContent=avgConf(kps);
+      document.getElementById('fillA').style.width=parseFloat(avgConf(kps))+'%';
+      document.getElementById('kpA').textContent=highKP(kps)+'/17';
+    }
+  }catch(_){}
+  requestAnimationFrame(loopA);
+}
+
+async function loopB(){
+  if(!running)return;
+  fB++;const now=performance.now();
+  if(now-tB>1000){document.getElementById('fpsB').textContent=Math.round(fB*1000/(now-tB));fB=0;tB=now;}
+  xB.save();xB.translate(310,0);xB.scale(-1,1);xB.drawImage(vid,0,0,310,232);xB.restore();
+  try{
+    const p=await dB.estimatePoses(vid,{maxPoses:3,flipHorizontal:false});
+    if(p.length){
+      const kps=p[0].keypoints.map(k=>({...k,x:640-k.x}));
+      drawPose(xB,kps,310,232,'#f97316');
+      document.getElementById('confB').textContent=avgConf(kps);
+      document.getElementById('fillB').style.width=parseFloat(avgConf(kps))+'%';
+      document.getElementById('kpB').textContent=highKP(kps)+'/17';
+      const ca=parseFloat(document.getElementById('confA').textContent)||0;
+      const cb=parseFloat(document.getElementById('confB').textContent)||0;
+      document.getElementById('verdict').textContent=ca>cb
+        ?`✅ Single-Pose (Thunder) is ${(ca-cb).toFixed(1)}% more accurate — better for 1 person`
+        :`⚡ Multi-Pose (Lightning) is ${(cb-ca).toFixed(1)}% higher this frame — similar lighting conditions`;
+    }
+  }catch(_){}
+  requestAnimationFrame(loopB);
+}
+
+async function start(){
+  document.getElementById('startBtn').disabled=true;
+  document.getElementById('verdict').textContent='Loading both models…';
+  const stream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480},audio:false});
+  vid.srcObject=stream;await new Promise(r=>vid.onloadedmetadata=r);vid.play();
+  [dA,dB]=await Promise.all([
+    poseDetection.createDetector(poseDetection.SupportedModels.MoveNet,{modelType:poseDetection.movenet.modelType.SINGLEPOSE_THUNDER}),
+    poseDetection.createDetector(poseDetection.SupportedModels.MoveNet,{modelType:poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING})
+  ]);
+  running=true;document.getElementById('stopBtn').disabled=false;
+  loopA();loopB();
+}
+
+function stop(){
+  running=false;
+  if(vid.srcObject)vid.srcObject.getTracks().forEach(t=>t.stop());
+  xA.clearRect(0,0,310,232);xB.clearRect(0,0,310,232);
+  document.getElementById('startBtn').disabled=false;
+  document.getElementById('stopBtn').disabled=true;
+  document.getElementById('verdict').textContent='Detection stopped.';
+}
+
+document.getElementById('startBtn').onclick=start;
+document.getElementById('stopBtn').onclick=stop;
+</script>
+</body>
+</html>
