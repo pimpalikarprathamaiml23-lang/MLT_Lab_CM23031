@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"/><title>Driver Alert</title>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.11.0/dist/tf-core.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.11.0/dist/tf-backend-webgl.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection@1.0.5/dist/face-landmarks-detection.min.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#0a0a0a;color:#fff;font-family:monospace;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:12px}
+  .box{position:relative;border-radius:10px;overflow:hidden;border:2px solid #222}
+  video{display:block;transform:scaleX(-1)}
+  canvas{position:absolute;inset:0;transform:scaleX(-1)}
+  #alert{font-size:24px;font-weight:900;padding:12px 30px;border-radius:8px;display:none;animation:f .4s infinite alternate}
+  #alert.on{display:block}
+  @keyframes f{from{opacity:1}to{opacity:.4}}
+  button{padding:10px 28px;background:#00e5ff;color:#000;border:none;border-radius:6px;font-weight:700;cursor:pointer}
+  #st{font-size:11px;color:#555}
+</style></head><body>
+<div style="font-size:13px;color:#aaa;letter-spacing:2px">👓 HEAD · YAWN · DROWSY ALERT</div>
+<div class="box">
+  <video id="v" width="460" height="320" autoplay muted playsinline></video>
+  <canvas id="c" width="460" height="320"></canvas>
+</div>
+<div id="alert"></div>
+<div id="st">Press Start</div>
+<button onclick="go()">▶ Start</button>
+<script>
+const v=document.getElementById('v'),c=document.getElementById('c'),ctx=c.getContext('2d');
+const al=document.getElementById('alert'),st=document.getElementById('st');
+let det,dc=0,lb=0;
+const D=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const EAR=(lm,i)=>{const p=i.map(x=>lm[x]);return(D(p[1],p[5])+D(p[2],p[4]))/(2*D(p[0],p[3]))};
+const MAR=(lm)=>D(lm[13],lm[14])/D(lm[78],lm[308]);
+function beep(f){if(Date.now()-lb<1500)return;lb=Date.now();try{const a=new AudioContext(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=f;g.gain.setValueAtTime(.3,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.4);o.start();o.stop(a.currentTime+.4)}catch(_){}}
+function show(msg,col){al.textContent=msg;al.style.background=col;al.className='alert on'}
+function hide(){al.className='alert'}
+async function go(){
+  st.textContent='Loading...';
+  await tf.setBackend('webgl');await tf.ready();
+  det=await faceLandmarksDetection.createDetector(faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh,{runtime:'mediapipe',solutionPath:'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619',refineLandmarks:true,maxFaces:1});
+  v.srcObject=await navigator.mediaDevices.getUserMedia({video:{width:460,height:320,facingMode:'user'}});
+  await new Promise(r=>v.onloadedmetadata=r);
+  st.textContent='✅ Active';loop();
+}
+async function loop(){
+  requestAnimationFrame(loop);
+  ctx.clearRect(0,0,460,320);
+  const f=await det.estimateFaces(v,{flipHorizontal:true}).catch(()=>[]);
+  if(!f.length){show('⚠ NO FACE','#333');return}
+  const lm=f[0].keypoints;
+  const roll=Math.atan2(lm[263].y-lm[33].y,lm[263].x-lm[33].x)*(180/Math.PI);
+  const mar=MAR(lm),ear=(EAR(lm,[33,160,158,133,153,144])+EAR(lm,[362,385,387,263,373,380]))/2;
+  dc=ear<0.22?dc+1:0;
+  // draw eye line
+  ctx.beginPath();ctx.moveTo(lm[33].x*460,lm[33].y*320);ctx.lineTo(lm[263].x*460,lm[263].y*320);
+  ctx.strokeStyle=dc>=18?'#7c4dff':mar>0.55?'#ff6d00':roll>13?'#ff1744':'#00e5ff';ctx.lineWidth=3;ctx.stroke();
+  // draw eye rings
+  [[33,160,158,133,153,144],[362,385,387,263,373,380]].forEach(idx=>{ctx.beginPath();idx.forEach((i,n)=>n===0?ctx.moveTo(lm[i].x*460,lm[i].y*320):ctx.lineTo(lm[i].x*460,lm[i].y*320));ctx.closePath();ctx.strokeStyle=ear<0.22?'#7c4dff':'#00e5ff';ctx.lineWidth=1.5;ctx.stroke()});
+  // draw mouth
+  ctx.beginPath();[61,185,40,39,37,0,267,269,270,409,291,375,321,405,314,17,84,181,91,146].forEach((i,n)=>{if(i<lm.length)n===0?ctx.moveTo(lm[i].x*460,lm[i].y*320):ctx.lineTo(lm[i].x*460,lm[i].y*320)});ctx.closePath();ctx.strokeStyle=mar>0.55?'#ff6d00':'rgba(0,229,255,.35)';ctx.lineWidth=1.5;ctx.stroke();
+  // alerts
+  if(dc>=18){show('😴 DROWSY — WAKE UP!','#6200ea');beep(300);st.textContent=`EAR:${ear.toFixed(2)} eyes closing`}
+  else if(mar>0.55){show('😮 YAWNING — REST!','#e65100');beep(520);st.textContent=`MAR:${mar.toFixed(2)} mouth open`}
+  else if(roll>13){show('⚠ HEAD RIGHT — FOCUS!','#b71c1c');beep(880);st.textContent=`Roll:${roll.toFixed(1)}°`}
+  else{hide();st.textContent=`Roll:${roll.toFixed(1)}° MAR:${mar.toFixed(2)} EAR:${ear.toFixed(2)}`}
+}
+</script></body></html>
